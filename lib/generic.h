@@ -8,6 +8,7 @@
 namespace generic {
     // TYPEDEFS
     typedef uint64_t uuid;
+    typedef uint64_t project_vote;
 
     // REUSABLE STRUCTS
     struct Link {
@@ -67,6 +68,18 @@ namespace generic {
             index*=10;
         }
         return res;
+    }
+
+    template <typename T>
+    T clamp( T a, T min, T max ){
+        return a > max ? max
+               : a < min ? min
+               : a;
+    }
+
+    template <typename T>
+    T add( T a, T b ){
+        return clamp<T>(a + b, sizeof(a), 0);
     }
 }
 
