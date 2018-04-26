@@ -452,7 +452,7 @@ public:
 
         vote.normalize();
         projects.modify( project, 0, [&](auto& record){
-            record.votes = record.votes + vote;
+            record.votes += vote;
         });
 
 

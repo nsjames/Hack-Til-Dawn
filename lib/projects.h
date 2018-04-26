@@ -24,7 +24,7 @@ namespace projects {
             fun =                   clamp<uint64_t>(fun, 0, 1);
         }
 
-        ProjectVote& operator +( ProjectVote& vote ) {
+        ProjectVote& operator +=( const ProjectVote& vote ) {
             use_of_blockchain       = add(use_of_blockchain, vote.use_of_blockchain);
             usefulness              = add(usefulness, vote.usefulness);
             originality             = add(originality, vote.originality);
