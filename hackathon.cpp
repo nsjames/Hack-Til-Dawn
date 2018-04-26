@@ -18,6 +18,16 @@ using namespace users;
 using namespace teams;
 using namespace projects;
 
+
+/***
+ * This contract requires no user authorization accounts.
+ * It uses Scatter identity keys to verify transactions making it so
+ * the users can switch out EOS accounts within their identity without
+ * losing their owned assets such as teams and projects.
+ *
+ * All non-owner requests must be sent with the signature of the front-end application which is
+ * hosting this contract.
+ */
 class hackathon : contract {
     using contract::contract;
 
