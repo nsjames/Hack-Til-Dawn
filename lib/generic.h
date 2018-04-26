@@ -34,7 +34,7 @@ namespace generic {
     }
 
     /***
-     * Turns an integer into a vector of ints ( ie 1024 == [4,2,0,1] )
+     * Turns an integer into a vector of ints ( ie 1024 == [1,0,2,4] )
      * @param i
      * @return
      */
@@ -44,11 +44,12 @@ namespace generic {
             v.push_back(i%10);
             i/=10;
         }
+        reverse(v.begin(), v.end());
         return v;
     }
 
     /***
-     * Concatenates two integers together ( ie 1024/1024 = 10241024 )
+     * Concatenates two integers together ( ie 1024+1024 = 10241024 [NOT] 2048 )
      * @param a
      * @param b
      * @return
@@ -57,6 +58,7 @@ namespace generic {
         vector<uint64_t> va = intToVector(a);
         vector<uint64_t> vb = intToVector(b);
         va.insert(va.end(), vb.begin(), vb.end());
+        reverse(va.begin(), va.end());
 
         int index = 1;
         uint64_t res = 0;

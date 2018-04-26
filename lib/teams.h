@@ -23,6 +23,14 @@ namespace teams {
         uuid primary_key() const { return keyid; }
         EOSLIB_SERIALIZE( Team, (keyid)(key)(name)(bio)(members)(member_count)(tags)(links) )
     };
+
+    // @abi table joinrequests i64
+    struct JoinRequest {
+        uuid                    teamid;
+        vector<uuid>            users;
+
+        EOSLIB_SERIALIZE( JoinRequest, (teamid)(users) )
+    };
 }
 
 #endif //HACKATHON_TEAMS_H
