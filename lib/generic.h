@@ -64,7 +64,7 @@ namespace generic {
         uint64_t res = 0;
         for ( auto i : va ){
             res += i*index;
-            index=index*10;
+            index*=10;
         }
         return res;
     }
