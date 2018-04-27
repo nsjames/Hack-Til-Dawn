@@ -46,8 +46,8 @@ private:
      * @param key
      */
     void prove( signature sig, public_key key ){
-        eosio_assert(SignProof::exists(), "No signature proof is set");
-        Proof proof = SignProof::get();
+        eosio_assert(SignProof(code,0).exists(), "No signature proof is set");
+        Proof proof = SignProof(code,0).get();
         assert_recover_key( &proof.hash, (const char*)&sig, sizeof(sig), (const char*)&key.data, sizeof(key) );
     }
 
@@ -83,8 +83,8 @@ private:
 
         // Creating a fingerprint of (user_id + idea_id)
         uint64_t fingerprint = concatInts(act.keyid, act.ideaid);
-        eosio_assert(!T::exists(fingerprint), "User has already voted on this");
-        T::set(1, fingerprint);
+        eosio_assert(!T(code,fingerprint).exists(), "User has already voted on this");
+        T(code,fingerprint).set(1, _self);
     }
 
     typedef multi_index<N(users),     User>             Users;
@@ -94,16 +94,16 @@ private:
     typedef multi_index<N(ideas),     Idea>             Ideas;
     typedef multi_index<N(projects),  Project>          Projects;
 
-    typedef singleton<N(hackathon), N(appkey), N(hackathon), account_name>              AppKey;
-    typedef singleton<N(hackathon), N(proof), N(hackathon), Proof>                      SignProof;
-    typedef singleton<N(hackathon), N(ideavotes), N(hackathon), uint8_t>                IdeaVotes;
-    typedef singleton<N(hackathon), N(ideaflags), N(hackathon), uint8_t>                IdeaFlags;
-    typedef singleton<N(hackathon), N(teamideas), N(hackathon), uuid>                   TeamIdea;
-    typedef singleton<N(hackathon), N(joinrequests), N(hackathon), JoinRequest>         JoinRequests;
-    typedef singleton<N(hackathon), N(alreadyreq), N(hackathon), uint8_t>               AlreadyRequested;
-    typedef singleton<N(hackathon), N(bannedideas), N(hackathon), uint8_t>              BannedIdeas;
-    typedef singleton<N(hackathon), N(bannedusers), N(hackathon), uint8_t>              BannedUsers;
-    typedef singleton<N(hackathon), N(votes), N(hackathon), uint8_t>                    Votes;
+    typedef singleton<N(appkey), account_name>              AppKey;
+    typedef singleton<N(proof), Proof>                      SignProof;
+    typedef singleton<N(ideavotes), uint8_t>                IdeaVotes;
+    typedef singleton<N(ideaflags), uint8_t>                IdeaFlags;
+    typedef singleton<N(teamideas), uuid>                   TeamIdea;
+    typedef singleton<N(joinrequests), JoinRequest>         JoinRequests;
+    typedef singleton<N(alreadyreq), uint8_t>               AlreadyRequested;
+    typedef singleton<N(bannedideas), uint8_t>              BannedIdeas;
+    typedef singleton<N(bannedusers), uint8_t>              BannedUsers;
+    typedef singleton<N(votes), uint8_t>                    Votes;
 
 public:
     hackathon ( account_name self ) : contract(self){}
@@ -111,7 +111,7 @@ public:
     void setkey( account_name key ){
         require_auth(_self);
         require_auth(key);
-        AppKey::set(key);
+        AppKey(code,_self).set(key, _self);
     }
 
     /***
@@ -122,7 +122,7 @@ public:
         require_auth(_self);
         checksum256 hash;
         sha256((char *) &cleartext, sizeof(cleartext), &hash);
-        SignProof::set(Proof{hash});
+        SignProof(code,_self).set(Proof{hash}, _self);
     }
 
     /***
@@ -145,21 +145,21 @@ public:
      * @param strkey
      */
     void user( User user, string strkey, signature sig ){
-        require_auth(AppKey::get());
-        prove(sig, user.key);
+//        require_auth(AppKey(code,0).get());
+//        prove(sig, user.key);
 
-        Users users(_self, _self);
-        uuid keyid = murmur(strkey);
-        uuid nameid = murmur(user.name);
-        auto existingUser = users.find(keyid);
-        eosio_assert(existingUser == users.end(), "A user with this public key already exists");
-        users.emplace( _self, [&]( auto& record ){
-            record = user;
-            record.keyid = keyid;
-            record.last_active = now();
-
-            addNameReference<UserNames>( nameid, keyid );
-        });
+//        Users users(_self, _self);
+//        uuid keyid = murmur(strkey);
+//        uuid nameid = murmur(user.name);
+//        auto existingUser = users.find(keyid);
+//        eosio_assert(existingUser == users.end(), "A user with this public key already exists");
+//        users.emplace( _self, [&]( auto& record ){
+//            record = user;
+//            record.keyid = keyid;
+//            record.last_active = now();
+//
+//            addNameReference<UserNames>( nameid, keyid );
+//        });
     }
 
     /***
@@ -168,7 +168,7 @@ public:
      * @param sig
      */
     void userupdate( User user, signature sig ){
-        require_auth(AppKey::get());
+        require_auth(AppKey(code,_self).get());
         Users users(_self, _self);
         auto existingUser = users.find(user.keyid);
         eosio_assert(existingUser != users.end(), "This user does not exist");
@@ -187,7 +187,7 @@ public:
      * @param strkey
      */
     void usertouch( string strkey, signature sig ){
-        require_auth(AppKey::get());
+        require_auth(AppKey(code,_self).get());
         Users users(_self, _self);
         uuid keyid = murmur(strkey);
         auto user = users.find(keyid);
@@ -204,7 +204,7 @@ public:
         Users users(_self, _self);
         auto user = users.find(id);
         eosio_assert(user != users.end(), "This user does not exist");
-        BannedUsers::set(1, id);
+        BannedUsers(code,id).set(1, _self);
         users.erase(user);
     }
 
@@ -213,9 +213,9 @@ public:
      * @param idea
      */
     void idea( Idea idea ){
-        require_auth(AppKey::get());
+        require_auth(AppKey(code,_self).get());
         uuid id = murmur(idea.description);
-        eosio_assert(!BannedIdeas::exists(id), "Idea is banned");
+        eosio_assert(!BannedIdeas(code,id).exists(), "Idea is banned");
 
         Ideas ideas(_self, _self);
         eosio_assert(ideas.find(id) == ideas.end(), "Duplicate idea");
@@ -229,12 +229,12 @@ public:
     }
 
     void ideavote( IdeaAction vote ){
-        require_auth(AppKey::get());
+        require_auth(AppKey(code,_self).get());
         castIdeaAction<IdeaVotes>(vote);
     }
 
     void ideaflag( IdeaAction flag ){
-        require_auth(AppKey::get());
+        require_auth(AppKey(code,_self).get());
         castIdeaAction<IdeaFlags>(flag);
     }
 
@@ -244,7 +244,7 @@ public:
         Ideas ideas(_self, _self);
         auto idea = ideas.find(id);
         eosio_assert(idea != ideas.end(), "Idea does not exist");
-        BannedIdeas::set(1, id);
+        BannedIdeas(code,id).set(1, _self);
         ideas.erase(idea);
     }
 
@@ -254,7 +254,7 @@ public:
      * @param strkey
      */
     void team( Team team, string strkey, signature sig ){
-        require_auth(AppKey::get());
+        require_auth(AppKey(code,_self).get());
         Users users(_self, _self);
         uuid id = murmur(strkey);
         auto leader = users.find(id);
@@ -281,9 +281,9 @@ public:
      * @param sig
      */
     void teamjoin( uuid teamid, uuid userid, signature sig ){
-        require_auth(AppKey::get());
+        require_auth(AppKey(code,_self).get());
         uint64_t fingerprint = concatInts(userid, fingerprint);
-        eosio_assert(!AlreadyRequested::exists(fingerprint), "User has already requested this");
+        eosio_assert(!AlreadyRequested(code,fingerprint).exists(), "User has already requested this");
 
         Teams teams(_self, _self);
         Users users(_self, _self);
@@ -295,13 +295,13 @@ public:
         eosio_assert(user->type != "Voter", "Too many teams are working on this Idea");
         prove(sig, user->key);
 
-        JoinRequest joinRequest = JoinRequests::exists(teamid)
-                                  ? JoinRequests::get(teamid)
+        JoinRequest joinRequest = JoinRequests(code,teamid).exists()
+                                  ? JoinRequests(code,teamid).get()
                                   : JoinRequest{teamid, {}};
 
         joinRequest.users.push_back(userid);
-        JoinRequests::set(joinRequest);
-        AlreadyRequested::set(1, fingerprint);
+        JoinRequests(code,teamid).set(joinRequest, _self);
+        AlreadyRequested(code,fingerprint).set(1, _self);
     }
 
     /***
@@ -312,7 +312,7 @@ public:
      * @param sig
      */
     void teamanswer( uuid teamid, uuid userid, uint8_t accepted, signature sig ){
-        require_auth(AppKey::get());
+        require_auth(AppKey(code,0).get());
         Teams teams(_self, _self);
         Users users(_self, _self);
         auto team = teams.find(teamid);
@@ -320,12 +320,12 @@ public:
 
         eosio_assert(team != teams.end(), "Team does not exist");
         eosio_assert(user != users.end(), "User does not exist");
-        eosio_assert(JoinRequests::exists(teamid), "No join requests");
+        eosio_assert(JoinRequests(code,teamid).exists(), "No join requests");
 
         auto leader = users.find(team->keyid);
         eosio_assert(leader != users.end(), "Leader does not exist");
 
-        JoinRequest joinRequest = JoinRequests::get(teamid);
+        JoinRequest joinRequest = JoinRequests(code,teamid).get();
         auto item = find(joinRequest.users.begin(), joinRequest.users.end(), userid);
         eosio_assert(item != joinRequest.users.end(), "User didn't request to be added");
         joinRequest.users.erase(item);
@@ -347,7 +347,7 @@ public:
      * @param ideaid
      */
     void teamwork( uuid teamid, uuid ideaid, signature sig ){
-        require_auth(AppKey::get());
+        require_auth(AppKey(code,_self).get());
         Teams teams(_self, _self);
         Ideas ideas(_self, _self);
         auto team = teams.find(teamid);
@@ -358,8 +358,8 @@ public:
         eosio_assert(idea->teams.size() <= 5, "Too many teams are working on this Idea");
         prove(sig, team->key);
 
-        if(TeamIdea::exists(team->keyid)){
-            auto previousIdea = ideas.find(TeamIdea::get(team->keyid));
+        if(TeamIdea(code,team->keyid).exists()){
+            auto previousIdea = ideas.find(TeamIdea(code,team->keyid).get());
             // Idea might have been banned since
             if(previousIdea != ideas.end()){
                 ideas.modify( previousIdea, 0, [&](auto& record){
@@ -373,7 +373,7 @@ public:
             record.teams.push_back(team->keyid);
         });
 
-        TeamIdea::set(idea->id, team->keyid);
+        TeamIdea(code,team->keyid).set(idea->id, _self);
     }
 
     /***
@@ -382,7 +382,7 @@ public:
      * @param sig
      */
     void project ( Project project, signature sig ){
-        require_auth(AppKey::get());
+        require_auth(AppKey(code,_self).get());
         Teams teams(_self, _self);
         auto team = teams.find(project.teamid);
         eosio_assert(team != teams.end(), "Team does not exist");
@@ -406,7 +406,7 @@ public:
      * @param sig
      */
     void projectup( Project project, signature sig ){
-        require_auth(AppKey::get());
+        require_auth(AppKey(code,_self).get());
         Teams teams(_self, _self);
         auto team = teams.find(project.teamid);
         eosio_assert(team != teams.end(), "Team does not exist");
@@ -435,7 +435,7 @@ public:
     }
 
     void vote( ProjectVote vote, uuid projectid, uuid userid, signature sig ){
-        require_auth(AppKey::get());
+        require_auth(AppKey(code,_self).get());
         Users users(_self, _self);
         auto user = users.find(userid);
         eosio_assert(user != users.end(), "User does not exist");
@@ -447,8 +447,8 @@ public:
         eosio_assert(project != projects.end(), "Project does not exist");
 
         uint64_t fingerprint = concatInts(projectid, userid);
-        eosio_assert(!Votes::exists(fingerprint), "User has already voted on this project");
-        Votes::set(1, fingerprint);
+        eosio_assert(!Votes(code,fingerprint).exists(), "User has already voted on this project");
+        Votes(code,fingerprint).set(1, _self);
 
         vote.normalize();
         projects.modify( project, 0, [&](auto& record){

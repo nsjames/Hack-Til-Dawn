@@ -1,11 +1,9 @@
-//
-// Created by Work on 4/26/2018.
-//
-
 #ifndef HACKATHON_GENERIC_H
 #define HACKATHON_GENERIC_H
 
 namespace generic {
+    static constexpr uint64_t code = N(hackathon);
+    
     // TYPEDEFS
     typedef uint64_t uuid;
     typedef uint64_t project_vote;
@@ -30,7 +28,7 @@ namespace generic {
 
 
     // HELPERS
-    inline static uint64_t murmur( string strkey ){
+    inline static uint64_t murmur( const string& strkey ){
         return std::hash<string>{}(strkey);
     }
 
@@ -39,7 +37,7 @@ namespace generic {
      * @param i
      * @return
      */
-    vector<uint64_t> intToVector( uint64_t i ){
+    const vector<uint64_t> intToVector( uint64_t i ){
         vector<uint64_t> v;
         while(i > 0){
             v.push_back(i%10);
@@ -55,7 +53,7 @@ namespace generic {
      * @param b
      * @return
      */
-    uint64_t concatInts( uint64_t a, uint64_t b ){
+    const uint64_t concatInts( const uint64_t& a, const uint64_t& b ){
         vector<uint64_t> va = intToVector(a);
         vector<uint64_t> vb = intToVector(b);
         va.insert(va.end(), vb.begin(), vb.end());

@@ -1,7 +1,3 @@
-//
-// Created by Work on 4/26/2018.
-//
-
 #ifndef HACKATHON_IDEAS_H
 #define HACKATHON_IDEAS_H
 

@@ -1,7 +1,3 @@
-//
-// Created by Work on 4/26/2018.
-//
-
 #ifndef HACKATHON_USERS_H
 #define HACKATHON_USERS_H
 
