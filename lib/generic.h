@@ -18,6 +18,7 @@ namespace generic {
 
     // @abi table usernames i64
     // @abi table teamnames i64
+    // @abi table projnames i64
     struct NameToKey {
         uuid                    nameid;
         uuid                    keyid;

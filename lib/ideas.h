@@ -11,10 +11,10 @@ namespace ideas {
         string                  description;
         uint64_t                upvotes;
         uint64_t                flags;
-        vector<uuid>            teams;
+        vector<uuid>            teamids;
 
         uuid primary_key() const { return id; }
-        EOSLIB_SERIALIZE( Idea, (id)(description)(upvotes)(flags)(teams) )
+        EOSLIB_SERIALIZE( Idea, (id)(description)(upvotes)(flags)(teamids) )
     };
 
     // @abi action

@@ -46,9 +46,17 @@ private:
      * @param key
      */
     void prove( signature sig, public_key key ){
-        eosio_assert(SignProof(code,0).exists(), "No signature proof is set");
-        Proof proof = SignProof(code,0).get();
+        eosio_assert(SignProof(code,_self).exists(), "No signature proof is set");
+        Proof proof = SignProof(code,_self).get();
         assert_recover_key( &proof.hash, (const char*)&sig, sizeof(sig), (const char*)&key.data, sizeof(key) );
+    }
+
+    void proveUser(string strkey, signature sig){
+        Users users(_self, _self);
+        uuid keyid = murmur(strkey);
+        auto user = users.find(keyid);
+        eosio_assert(user != users.end(), "User does not exist");
+        if(user != users.end()) prove(sig, user->key);
     }
 
     template <typename T>
@@ -93,6 +101,7 @@ private:
     typedef multi_index<N(teamnames), NameToKey>        TeamNames;
     typedef multi_index<N(ideas),     Idea>             Ideas;
     typedef multi_index<N(projects),  Project>          Projects;
+    typedef multi_index<N(projnames),  NameToKey>       ProjectNames;
 
     typedef singleton<N(appkey), account_name>              AppKey;
     typedef singleton<N(proof), Proof>                      SignProof;
@@ -145,21 +154,21 @@ public:
      * @param strkey
      */
     void user( User user, string strkey, signature sig ){
-//        require_auth(AppKey(code,0).get());
-//        prove(sig, user.key);
+        require_auth(AppKey(code,_self).get());
+        prove(sig, user.key);
 
-//        Users users(_self, _self);
-//        uuid keyid = murmur(strkey);
-//        uuid nameid = murmur(user.name);
-//        auto existingUser = users.find(keyid);
-//        eosio_assert(existingUser == users.end(), "A user with this public key already exists");
-//        users.emplace( _self, [&]( auto& record ){
-//            record = user;
-//            record.keyid = keyid;
-//            record.last_active = now();
-//
-//            addNameReference<UserNames>( nameid, keyid );
-//        });
+        Users users(_self, _self);
+        uuid keyid = murmur(strkey);
+        uuid nameid = murmur(user.name);
+        auto existingUser = users.find(keyid);
+        eosio_assert(existingUser == users.end(), "A user with this public key already exists");
+        users.emplace( _self, [&]( auto& record ){
+            record = user;
+            record.keyid = keyid;
+            record.last_active = now();
+
+            addNameReference<UserNames>( nameid, keyid );
+        });
     }
 
     /***
@@ -188,15 +197,12 @@ public:
      */
     void usertouch( string strkey, signature sig ){
         require_auth(AppKey(code,_self).get());
+        proveUser(strkey, sig);
         Users users(_self, _self);
-        uuid keyid = murmur(strkey);
-        auto user = users.find(keyid);
-        if(user != users.end()){
-            prove(sig, user->key);
-            users.modify( user, 0, [&]( auto& record ){
-                record.last_active = now();
-            });
-        }
+        auto user = users.find(murmur(strkey));
+        users.modify( user, 0, [&]( auto& record ){
+            record.last_active = now();
+        });
     }
 
     void userban( uuid id ){
@@ -212,10 +218,12 @@ public:
      * Creates an idea
      * @param idea
      */
-    void idea( Idea idea ){
+    void idea( Idea idea, string strkey, signature sig ){
         require_auth(AppKey(code,_self).get());
         uuid id = murmur(idea.description);
         eosio_assert(!BannedIdeas(code,id).exists(), "Idea is banned");
+
+        proveUser(strkey, sig);
 
         Ideas ideas(_self, _self);
         eosio_assert(ideas.find(id) == ideas.end(), "Duplicate idea");
@@ -224,16 +232,18 @@ public:
             record.id = id;
             record.description = idea.description;
             record.upvotes = 0;
-            record.teams = {};
+            record.teamids = {};
         });
     }
 
-    void ideavote( IdeaAction vote ){
+    void ideavote( IdeaAction vote, string strkey, signature sig ){
+        proveUser(strkey, sig);
         require_auth(AppKey(code,_self).get());
         castIdeaAction<IdeaVotes>(vote);
     }
 
-    void ideaflag( IdeaAction flag ){
+    void ideaflag( IdeaAction flag, string strkey, signature sig ){
+        proveUser(strkey, sig);
         require_auth(AppKey(code,_self).get());
         castIdeaAction<IdeaFlags>(flag);
     }
@@ -275,6 +285,28 @@ public:
     }
 
     /***
+     * Updates a team
+     * @param team
+     * @param sig
+     */
+    void teamupdate( Team team, signature sig ){
+        require_auth(AppKey(code,_self).get());
+
+        Teams teams(_self, _self);
+        auto existingTeam = teams.find(team.keyid);
+        eosio_assert(existingTeam != teams.end(), "Team does not exist");
+
+        prove(sig, existingTeam->key);
+
+        teams.modify( existingTeam, 0, [&]( auto& record ){
+            record.name = team.name;
+            record.bio = team.bio;
+            record.tags = team.tags;
+            record.links = team.links;
+        });
+    }
+
+    /***
      * Requests to join a given team
      * @param teamid
      * @param userid
@@ -312,7 +344,7 @@ public:
      * @param sig
      */
     void teamanswer( uuid teamid, uuid userid, uint8_t accepted, signature sig ){
-        require_auth(AppKey(code,0).get());
+        require_auth(AppKey(code,_self).get());
         Teams teams(_self, _self);
         Users users(_self, _self);
         auto team = teams.find(teamid);
@@ -355,7 +387,7 @@ public:
 
         eosio_assert(team != teams.end(), "Team does not exist");
         eosio_assert(idea != ideas.end(), "Idea does not exist");
-        eosio_assert(idea->teams.size() <= 5, "Too many teams are working on this Idea");
+        eosio_assert(idea->teamids.size() <= 5, "Too many teams are working on this Idea");
         prove(sig, team->key);
 
         if(TeamIdea(code,team->keyid).exists()){
@@ -363,14 +395,14 @@ public:
             // Idea might have been banned since
             if(previousIdea != ideas.end()){
                 ideas.modify( previousIdea, 0, [&](auto& record){
-                    auto item = find(record.teams.begin(), record.teams.end(), team->keyid);
-                    if(item != record.teams.end()) record.teams.erase(item);
+                    auto item = find(record.teamids.begin(), record.teamids.end(), team->keyid);
+                    if(item != record.teamids.end()) record.teamids.erase(item);
                 });
             }
         }
 
         ideas.modify( idea, 0, [&](auto& record){
-            record.teams.push_back(team->keyid);
+            record.teamids.push_back(team->keyid);
         });
 
         TeamIdea(code,team->keyid).set(idea->id, _self);
@@ -397,6 +429,8 @@ public:
             record = project;
             record.teamid = team->keyid;
             record.votes = ProjectVote{0,0,0,0,0};
+
+            addNameReference<UserNames>( murmur(project.name), project.teamid );
         });
     }
 
