@@ -18,6 +18,15 @@ namespace users {
         uuid primary_key() const { return keyid; }
         EOSLIB_SERIALIZE( User, (keyid)(key)(name)(type)(bio)(links)(last_active) )
     };
+
+    // @abi table donations i64
+    struct Donations {
+        uuid                    keyid;
+        vector<string>          trxs;
+
+        uuid primary_key() const { return keyid; }
+        EOSLIB_SERIALIZE( Donations, (keyid)(trxs) )
+    };
 }
 
 #endif //HACKATHON_USERS_H

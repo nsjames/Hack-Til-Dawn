@@ -15,17 +15,18 @@ namespace teams {
         uint64_t                member_count;
         vector<string>          tags;
         vector<Link>            links;
+        uuid                    ideaid;
 
         uuid primary_key() const { return keyid; }
-        EOSLIB_SERIALIZE( Team, (keyid)(key)(name)(bio)(members)(member_count)(tags)(links) )
+        EOSLIB_SERIALIZE( Team, (keyid)(key)(name)(bio)(members)(member_count)(tags)(links)(ideaid) )
     };
 
     // @abi table joinrequests i64
     struct JoinRequest {
         uuid                    teamid;
-        vector<uuid>            users;
+        vector<uuid>            userids;
 
-        EOSLIB_SERIALIZE( JoinRequest, (teamid)(users) )
+        EOSLIB_SERIALIZE( JoinRequest, (teamid)(userids) )
     };
 }
 

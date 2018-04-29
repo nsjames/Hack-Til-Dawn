@@ -27,6 +27,15 @@ namespace generic {
         EOSLIB_SERIALIZE( NameToKey, (nameid)(keyid) )
     };
 
+    // @abi table memberteams i64
+    struct MemberVector {
+        uuid                    keyid;
+        vector<uuid>            teamids;
+
+        uuid primary_key() const { return keyid; }
+        EOSLIB_SERIALIZE( MemberVector, (keyid)(teamids) )
+    };
+
 
     // HELPERS
     inline static uint64_t murmur( const string& strkey ){

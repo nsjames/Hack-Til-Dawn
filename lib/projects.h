@@ -35,7 +35,7 @@ namespace projects {
         EOSLIB_SERIALIZE( ProjectVote, (use_of_blockchain)(usefulness)(originality)(user_experience)(fun) )
     };
 
-    // @table projects i64
+    // @abi table projects i64
     struct Project {
         uuid                teamid;
         string              name;
