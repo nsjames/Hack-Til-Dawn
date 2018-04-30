@@ -700,7 +700,7 @@ public:
 
         if(!user->sponsor){
             uint64_t votedOn = VoteTimes(code,fingerprint).get();
-            eosio_assert(votedOn < (now() - 60*60*4), "It's too early to rescind this vote, users must wait 4 hours before rescinding votes");
+            eosio_assert(votedOn < (now() - 60*60*4*1000), "It's too early to rescind this vote, users must wait 4 hours before rescinding votes");
         }
 
         ProjectVote vote = Votes(code,fingerprint).get();
