@@ -570,7 +570,7 @@ public:
 
         eosio_assert(team != teams.end(), "Team does not exist");
         eosio_assert(idea != ideas.end(), "Idea does not exist");
-        eosio_assert(idea->teamids.size() <= 5, "Too many teams are working on this Idea");
+        eosio_assert(idea->teamids.size() < 5, "Too many teams are working on this Idea");
         prove(sig, team->key);
 
         if(TeamIdea(code,team->keyid).exists()){
