@@ -171,9 +171,8 @@ public:
     /***
      * //TODO: TESTING ONLY!!!
      * Cleans tables
-     * @param k
      */
-    void clean( name anything ){
+    void clean(){
         require_auth(_self);
         cleanTable<Users>();
         cleanTable<Teams>();
@@ -208,11 +207,11 @@ public:
         eosio_assert(existingUser == users.end(), "A user with this public key already exists");
         nameIsUnique<UserNames>(nameid);
         users.emplace( _self, [&]( auto& record ){
+            user.account = name{0};
             record = user;
             record.keyid = keyid;
             record.last_active = now();
             record.sponsor = 0;
-//            record.user =
 
             addNameReference<UserNames>( nameid, keyid );
         });
@@ -230,7 +229,7 @@ public:
         eosio_assert(user != users.end(), "No such user");
         prove(sig, user->key);
         users.modify( user, 0, [&](auto& record){
-            record.sponsor = 1;
+            record.account = account;
         });
     }
 
@@ -658,14 +657,14 @@ public:
         projects.erase(project);
     }
 
-    void vote( ProjectVote vote, uuid projectid, uuid userid, signature sig ){
+    void vote( ProjectVote vote, uuid projectid, uuid userid ){
         require_auth(AppKey(code,_self).get());
         Users users(_self, _self);
         auto user = users.find(userid);
         eosio_assert(user != users.end(), "User does not exist");
         eosio_assert(user->sponsor || CanVote(code,_self).get(), "Voting is closed");
 
-        prove(sig, user->key);
+        require_auth(user->account);
 
         Projects projects(_self, _self);
         auto project = projects.find(projectid);
@@ -683,14 +682,14 @@ public:
         });
     }
 
-    void unvote( uuid userid, uuid projectid, signature sig ){
+    void unvote( uuid userid, uuid projectid ){
         require_auth(AppKey(code,_self).get());
         Users users(_self, _self);
         auto user = users.find(userid);
         eosio_assert(user != users.end(), "User does not exist");
         eosio_assert(user->sponsor || CanVote(code,_self).get(), "Voting is closed");
 
-        prove(sig, user->key);
+        require_auth(user->account);
 
         Projects projects(_self, _self);
         auto project = projects.find(projectid);

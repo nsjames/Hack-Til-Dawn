@@ -18,7 +18,7 @@ namespace users {
         boolean                 sponsor;
 
         uuid primary_key() const { return keyid; }
-        EOSLIB_SERIALIZE( User, (keyid)(key)(name)(type)(bio)(links)(last_active)(account) )
+        EOSLIB_SERIALIZE( User, (keyid)(key)(name)(type)(bio)(links)(last_active)(account)(sponsor) )
     };
 
     // @abi table donations i64
