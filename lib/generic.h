@@ -5,8 +5,9 @@ namespace generic {
     static constexpr uint64_t code = N(hackathon);
     
     // TYPEDEFS
-    typedef uint64_t uuid;
-    typedef uint64_t project_vote;
+    typedef uint64_t    uuid;
+    typedef uint64_t    project_vote;
+    typedef uint8_t     boolean;
 
     // REUSABLE STRUCTS
     struct Link {
@@ -87,7 +88,12 @@ namespace generic {
 
     template <typename T>
     T add( T a, T b ){
-        return clamp<T>(a + b, sizeof(a), 0);
+        return clamp<T>(a + b, 0, sizeof(a));
+    }
+
+    template <typename T>
+    T sub( T a, T b ){
+        return clamp<T>(a - b, 0, sizeof(a));
     }
 }
 

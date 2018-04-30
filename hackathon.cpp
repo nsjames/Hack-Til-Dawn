@@ -124,9 +124,12 @@ private:
     typedef singleton<N(alreadyreq), uint8_t>               AlreadyRequested;
     typedef singleton<N(bannedideas), uint8_t>              BannedIdeas;
     typedef singleton<N(bannedusers), uint8_t>              BannedUsers;
-    typedef singleton<N(votes), uint8_t>                    Votes;
+    typedef singleton<N(votes), ProjectVote>                Votes;
+    typedef singleton<N(votetimes), uint64_t>               VoteTimes;
     typedef singleton<N(captchas), uuid>                    Captchas;
     typedef singleton<N(memberteams), MemberVector>         MemberOfTeams;
+    typedef singleton<N(canvote), boolean>                  CanVote;
+    typedef singleton<N(canproj), boolean>                  CanUploadProjects;
 
 public:
     hackathon ( account_name self ) : contract(self){}
@@ -146,6 +149,23 @@ public:
         checksum256 hash;
         sha256((char *) &cleartext, sizeof(cleartext), &hash);
         SignProof(code,_self).set(Proof{hash}, _self);
+    }
+
+    /***
+     * Toggles the ability for teams to upload project files
+     * @param b
+     */
+    void togglep( boolean b ){
+        require_auth(_self);
+        CanVote(code,_self).set(b,_self);
+    }
+
+    /***
+     * Toggles the ability for users to vote
+     */
+    void togglev( boolean b ){
+        require_auth(_self);
+        CanUploadProjects(code,_self).set(b,_self);
     }
 
     /***
@@ -191,8 +211,40 @@ public:
             record = user;
             record.keyid = keyid;
             record.last_active = now();
+            record.sponsor = 0;
+//            record.user =
 
             addNameReference<UserNames>( nameid, keyid );
+        });
+    }
+
+    /***
+     * Sets the account for a user
+     * @param userid
+     * @param account
+     * @param sig
+     */
+    void useracc( uuid userid, account_name account, signature sig ){
+        Users users(_self, _self);
+        auto user = users.find(userid);
+        eosio_assert(user != users.end(), "No such user");
+        prove(sig, user->key);
+        users.modify( user, 0, [&](auto& record){
+            record.sponsor = 1;
+        });
+    }
+
+    /***
+     * Sets a users as a sponsor
+     * @param userid
+     */
+    void usersponsor( uuid userid ){
+        require_auth(_self);
+        Users users(_self, _self);
+        auto user = users.find(userid);
+        eosio_assert(user != users.end(), "No such user");
+        users.modify( user, 0, [&](auto& record){
+            record.sponsor = 1;
         });
     }
 
@@ -428,7 +480,7 @@ public:
      * @param accepted
      * @param sig
      */
-    void teamanswer( uuid teamid, uuid userid, uint8_t accepted, signature sig ){
+    void teamanswer( uuid teamid, uuid userid, boolean accepted, signature sig ){
         require_auth(AppKey(code,_self).get());
         Teams teams(_self, _self);
         Users users(_self, _self);
@@ -554,6 +606,7 @@ public:
         Teams teams(_self, _self);
         auto team = teams.find(project.teamid);
         eosio_assert(team != teams.end(), "Team does not exist");
+        eosio_assert(CanUploadProjects(code,_self).get(), "Project creation is closed");
 
         prove(sig, team->key);
 
@@ -580,6 +633,7 @@ public:
         Teams teams(_self, _self);
         auto team = teams.find(project.teamid);
         eosio_assert(team != teams.end(), "Team does not exist");
+        eosio_assert(CanUploadProjects(code,_self).get(), "Project modification is closed");
 
         prove(sig, team->key);
 
@@ -609,6 +663,7 @@ public:
         Users users(_self, _self);
         auto user = users.find(userid);
         eosio_assert(user != users.end(), "User does not exist");
+        eosio_assert(user->sponsor || CanVote(code,_self).get(), "Voting is closed");
 
         prove(sig, user->key);
 
@@ -618,16 +673,45 @@ public:
 
         uint64_t fingerprint = concatInts(projectid, userid);
         eosio_assert(!Votes(code,fingerprint).exists(), "User has already voted on this project");
-        Votes(code,fingerprint).set(1, _self);
+        Votes(code,fingerprint).set(vote, _self);
+        VoteTimes(code,fingerprint).set(now(),_self);
 
-        vote.normalize();
+        if(!user->sponsor) vote.normalize();
+
         projects.modify( project, 0, [&](auto& record){
             record.votes += vote;
         });
+    }
 
+    void unvote( uuid userid, uuid projectid, signature sig ){
+        require_auth(AppKey(code,_self).get());
+        Users users(_self, _self);
+        auto user = users.find(userid);
+        eosio_assert(user != users.end(), "User does not exist");
+        eosio_assert(user->sponsor || CanVote(code,_self).get(), "Voting is closed");
 
+        prove(sig, user->key);
+
+        Projects projects(_self, _self);
+        auto project = projects.find(projectid);
+        eosio_assert(project != projects.end(), "Project does not exist");
+
+        uint64_t fingerprint = concatInts(projectid, userid);
+        eosio_assert(Votes(code,fingerprint).exists(), "User has not voted on this project");
+
+        if(!user->sponsor){
+            uint64_t votedOn = VoteTimes(code,fingerprint).get();
+            eosio_assert(votedOn < (now() - 60*60*4), "It's too early to rescind this vote, users must wait 4 hours before rescinding votes");
+        }
+
+        ProjectVote vote = Votes(code,fingerprint).get();
+        Votes(code,fingerprint).remove();
+
+        projects.modify( project, 0, [&](auto& record){
+            record.votes -= vote;
+        });
     }
 
 };
 
-EOSIO_ABI( hackathon, (setkey)(proof)(clean)(user)(userupdate)(usertouch)(donation)(userban)(idea)(ideavote)(ideaflag)(ideaban)(team)(teamupdate)(teamjoin)(teamanswer)(teamkick)(teamwork)(project)(projectup)(projectban) )
+EOSIO_ABI( hackathon, (setkey)(proof)(togglep)(togglev)(clean)(user)(useracc)(usersponsor)(userupdate)(usertouch)(donation)(userban)(idea)(ideavote)(ideaflag)(ideaban)(team)(teamupdate)(teamjoin)(teamanswer)(teamkick)(teamwork)(project)(projectup)(projectban)(vote)(unvote) )

@@ -14,9 +14,11 @@ namespace users {
         string                  bio;
         vector<Link>            links;
         uint64_t                last_active;
+        account_name            account;
+        boolean                 sponsor;
 
         uuid primary_key() const { return keyid; }
-        EOSLIB_SERIALIZE( User, (keyid)(key)(name)(type)(bio)(links)(last_active) )
+        EOSLIB_SERIALIZE( User, (keyid)(key)(name)(type)(bio)(links)(last_active)(account) )
     };
 
     // @abi table donations i64

@@ -32,6 +32,15 @@ namespace projects {
             return *this;
         }
 
+        ProjectVote& operator -=( const ProjectVote& vote ) {
+            use_of_blockchain       = sub(use_of_blockchain, vote.use_of_blockchain);
+            usefulness              = sub(usefulness, vote.usefulness);
+            originality             = sub(originality, vote.originality);
+            user_experience         = sub(user_experience, vote.user_experience);
+            fun                     = sub(fun, vote.fun);
+            return *this;
+        }
+
         EOSLIB_SERIALIZE( ProjectVote, (use_of_blockchain)(usefulness)(originality)(user_experience)(fun) )
     };
 
