@@ -81,6 +81,15 @@ private:
         eosio_assert(db.find(nameid) == db.end(), "This name already exists");
     }
 
+    void addToTeam( uuid userid, uuid teamid ){
+        MemberVector memberOfTeams = MemberOfTeams(code,userid).exists()
+                                     ? MemberOfTeams(code,userid).get()
+                                     : MemberVector{userid, {}};
+
+        memberOfTeams.teamids.push_back(teamid);
+        MemberOfTeams(code,userid).set(memberOfTeams, _self);
+    }
+
     template <typename T>
     void cleanTable(){
         T db(_self, _self);
@@ -106,30 +115,66 @@ private:
         T(code,fingerprint).set(1, _self);
     }
 
-    typedef multi_index<N(users),     User>                 Users;
-    typedef multi_index<N(usernames), NameToKey>            UserNames;
-    typedef multi_index<N(teams),     Team>                 Teams;
-    typedef multi_index<N(teamnames), NameToKey>            TeamNames;
-    typedef multi_index<N(ideas),     Idea>                 Ideas;
-    typedef multi_index<N(projects),  Project>              Projects;
-    typedef multi_index<N(projnames),  NameToKey>           ProjectNames;
-    typedef multi_index<N(donations),  Donations>           UserDonations;
+    void addVoteRecord( uuid userid, uuid projectid, ProjectVote vote ){
+        ProjectVoteRecords projectVoteRecords(_self, _self);
+        auto existing = projectVoteRecords.find(userid);
+        if(existing == projectVoteRecords.end()) projectVoteRecords.emplace(_self, [&](auto& record){
+            record.userid = userid;
+            record.votes = {ProjectVR{projectid, vote}};
+        });
+        else projectVoteRecords.modify(existing, 0, [&](auto& record){
+            record.votes.push_back(ProjectVR{projectid, vote});
+        });
+    }
 
-    typedef singleton<N(appkey), account_name>              AppKey;
-    typedef singleton<N(proof), Proof>                      SignProof;
-    typedef singleton<N(ideavotes), uint8_t>                IdeaVotes;
-    typedef singleton<N(ideaflags), uint8_t>                IdeaFlags;
-    typedef singleton<N(teamideas), uuid>                   TeamIdea;
-    typedef singleton<N(joinrequests), JoinRequest>         JoinRequests;
-    typedef singleton<N(alreadyreq), uint8_t>               AlreadyRequested;
-    typedef singleton<N(bannedideas), uint8_t>              BannedIdeas;
-    typedef singleton<N(bannedusers), uint8_t>              BannedUsers;
-    typedef singleton<N(votes), ProjectVote>                Votes;
-    typedef singleton<N(votetimes), uint64_t>               VoteTimes;
-    typedef singleton<N(captchas), uuid>                    Captchas;
-    typedef singleton<N(memberteams), MemberVector>         MemberOfTeams;
-    typedef singleton<N(canvote), boolean>                  CanVote;
-    typedef singleton<N(canproj), boolean>                  CanUploadProjects;
+    void removeVoteRecord( uuid userid, uuid projectid ){
+        ProjectVoteRecords projectVoteRecords(_self, _self);
+        auto existing = projectVoteRecords.find(userid);
+        eosio_assert(existing != projectVoteRecords.end(), "User has no vote records");
+        projectVoteRecords.modify(existing, 0, [&](auto& record){
+            auto item = find(record.votes.begin(), record.votes.end(), projectid);
+            record.votes.erase(item);
+        });
+    }
+
+    template <typename T>
+    uint64_t getSingletonValue(){ return T(code,_self).get_or_default(0); }
+    uint64_t getTotalVotes(){ return getSingletonValue<TotalVotes>(); }
+    uint64_t getSponsorCount(){ return getSingletonValue<SponsorCount>(); }
+
+    ProjectVote sponsorVote( ProjectVote vote ){
+        uint64_t totalVotes = getTotalVotes();
+        uint64_t sponsorCount = getSponsorCount();
+        return vote *= totalVotes/sponsorCount;
+    }
+
+    typedef multi_index<N(users),     User>                         Users;
+    typedef multi_index<N(usernames), NameToKey>                    UserNames;
+    typedef multi_index<N(teams),     Team>                         Teams;
+    typedef multi_index<N(teamnames), NameToKey>                    TeamNames;
+    typedef multi_index<N(ideas),     Idea>                         Ideas;
+    typedef multi_index<N(projects),  Project>                      Projects;
+    typedef multi_index<N(projnames),  NameToKey>                   ProjectNames;
+    typedef multi_index<N(donations),  Donations>                   UserDonations;
+    typedef multi_index<N(projectvotes), VoteRecord>                ProjectVoteRecords;
+
+    typedef singleton<N(appkey), account_name>                      AppKey;
+    typedef singleton<N(proof), Proof>                              SignProof;
+    typedef singleton<N(ideavotes), uint8_t>                        IdeaVotes;
+    typedef singleton<N(ideaflags), uint8_t>                        IdeaFlags;
+    typedef singleton<N(teamideas), uuid>                           TeamIdea;
+    typedef singleton<N(joinrequests), JoinRequest>                 JoinRequests;
+    typedef singleton<N(alreadyreq), uint8_t>                       AlreadyRequested;
+    typedef singleton<N(bannedideas), uint8_t>                      BannedIdeas;
+    typedef singleton<N(bannedusers), uint8_t>                      BannedUsers;
+    typedef singleton<N(votes), ProjectVote>                        Votes;
+    typedef singleton<N(votetimes), uint64_t>                       VoteTimes;
+    typedef singleton<N(captchas), uuid>                            Scatters;
+    typedef singleton<N(memberteams), MemberVector>                 MemberOfTeams;
+    typedef singleton<N(canvote), boolean>                          CanVote;
+    typedef singleton<N(canproj), boolean>                          CanUploadProjects;
+    typedef singleton<N(sponsorcount), uint64_t>                    SponsorCount;
+    typedef singleton<N(totalvotes), uint64_t>                      TotalVotes;
 
 public:
     hackathon ( account_name self ) : contract(self){}
@@ -155,7 +200,7 @@ public:
      * Toggles the ability for teams to upload project files
      * @param b
      */
-    void togglep( boolean b ){
+    void togglev( boolean b ){
         require_auth(_self);
         CanVote(code,_self).set(b,_self);
     }
@@ -163,7 +208,7 @@ public:
     /***
      * Toggles the ability for users to vote
      */
-    void togglev( boolean b ){
+    void togglep( boolean b ){
         require_auth(_self);
         CanUploadProjects(code,_self).set(b,_self);
     }
@@ -182,6 +227,7 @@ public:
         cleanTable<ProjectNames>();
         cleanTable<UserNames>();
         cleanTable<TeamNames>();
+        cleanTable<ProjectVoteRecords>();
     }
 
     /***
@@ -189,16 +235,16 @@ public:
      * @param user
      * @param strkey
      */
-    void user( User user, string strkey, signature sig, string captcha ){
+    void user( User user, string strkey, signature sig, string hash ){
         require_auth(AppKey(code,_self).get());
         prove(sig, user.key);
 
         uuid keyid = murmur(strkey);
         uuid nameid = murmur(user.name);
 
-        uuid captchaMurmur = murmur(captcha);
-        eosio_assert(!Captchas(code,captchaMurmur).exists(), "User already has an account");
-        Captchas(code,captchaMurmur).set(keyid, _self);
+        uuid scatter = murmur(hash);
+        eosio_assert(!Scatters(code,scatter).exists(), "User already has an account");
+        Scatters(code,scatter).set(keyid, _self);
 
         //TODO: Validate user type
 
@@ -237,14 +283,16 @@ public:
      * Sets a users as a sponsor
      * @param userid
      */
-    void usersponsor( uuid userid ){
+    void usersponsor( uuid userid, uint8_t isSponsor ){
         require_auth(_self);
         Users users(_self, _self);
         auto user = users.find(userid);
         eosio_assert(user != users.end(), "No such user");
         users.modify( user, 0, [&](auto& record){
-            record.sponsor = 1;
+            record.sponsor = isSponsor;
         });
+
+        SponsorCount(code,_self).set(getSponsorCount() + isSponsor ? 1 : -1, _self);
     }
 
     /***
@@ -262,6 +310,7 @@ public:
 
         users.modify( existingUser, 0, [&](auto& record){
             record.name = user.name;
+            record.type = user.type;
             record.bio = user.bio;
             record.links = user.links;
             record.last_active = now();
@@ -407,6 +456,7 @@ public:
             record.member_count = 1;
 
             addNameReference<TeamNames>( nameid, leader->keyid );
+            addToTeam( id, id );
         });
     }
 
@@ -510,12 +560,7 @@ public:
                 record.member_count++;
             });
 
-            MemberVector memberOfTeams = MemberOfTeams(code,userid).exists()
-                                      ? MemberOfTeams(code,userid).get()
-                                      : MemberVector{userid, {}};
-
-            memberOfTeams.teamids.push_back(teamid);
-            MemberOfTeams(code,userid).set(memberOfTeams, _self);
+            addToTeam( userid, teamid );
         }
     }
 
@@ -617,8 +662,6 @@ public:
             record = project;
             record.teamid = team->keyid;
             record.votes = ProjectVote{0,0,0,0,0};
-
-            addNameReference<ProjectNames>( murmur(project.name), project.teamid );
         });
     }
 
@@ -627,24 +670,17 @@ public:
      * @param project
      * @param sig
      */
-    void projectup( Project project, signature sig ){
+    void projectup( Project project ){
         require_auth(AppKey(code,_self).get());
-        Teams teams(_self, _self);
-        auto team = teams.find(project.teamid);
-        eosio_assert(team != teams.end(), "Team does not exist");
         eosio_assert(CanUploadProjects(code,_self).get(), "Project modification is closed");
-
-        prove(sig, team->key);
 
         Projects projects(_self, _self);
         auto existingProject = projects.find(project.teamid);
         eosio_assert(existingProject != projects.end(), "Project does not exist");
+        require_auth(existingProject->account);
 
         projects.modify( existingProject, 0, [&](auto& record){
-            record.name = project.name;
-            record.overview = project.overview;
             record.whitepaper = project.whitepaper;
-            record.tags = project.tags;
             record.links = project.links;
         });
     }
@@ -662,7 +698,9 @@ public:
         Users users(_self, _self);
         auto user = users.find(userid);
         eosio_assert(user != users.end(), "User does not exist");
+        require_auth(user->account);
         eosio_assert(user->sponsor || CanVote(code,_self).get(), "Voting is closed");
+        eosio_assert(user->votes < 30, "You have already voted on 30 projects.");
 
         require_auth(user->account);
 
@@ -675,11 +713,21 @@ public:
         Votes(code,fingerprint).set(vote, _self);
         VoteTimes(code,fingerprint).set(now(),_self);
 
-        if(!user->sponsor) vote.normalize();
+        if(!user->sponsor) {
+            vote.normalize();
+            TotalVotes(code,_self).set(getTotalVotes()+1,_self);
+        }
 
         projects.modify( project, 0, [&](auto& record){
-            record.votes += vote;
+            if(user->sponsor) record.votes += sponsorVote(vote);
+            else record.votes += vote;
         });
+
+        users.modify( user, 0, [&](auto& record){
+            record.votes++;
+        });
+
+        addVoteRecord(userid, projectid, vote);
     }
 
     void unvote( uuid userid, uuid projectid ){
@@ -687,6 +735,7 @@ public:
         Users users(_self, _self);
         auto user = users.find(userid);
         eosio_assert(user != users.end(), "User does not exist");
+        require_auth(user->account);
         eosio_assert(user->sponsor || CanVote(code,_self).get(), "Voting is closed");
 
         require_auth(user->account);
@@ -700,17 +749,25 @@ public:
 
         if(!user->sponsor){
             uint64_t votedOn = VoteTimes(code,fingerprint).get();
-            eosio_assert(votedOn < (now() - 60*60*4*1000), "It's too early to rescind this vote, users must wait 4 hours before rescinding votes");
+            eosio_assert(votedOn < (now() - 60*60*6*1000), "It's too early to rescind this vote, users must wait 6 hours before rescinding votes");
+            TotalVotes(code,_self).set(getTotalVotes()-1,_self);
         }
 
         ProjectVote vote = Votes(code,fingerprint).get();
         Votes(code,fingerprint).remove();
 
         projects.modify( project, 0, [&](auto& record){
-            record.votes -= vote;
+            if(user->sponsor) record.votes -= sponsorVote(vote);
+            else record.votes -= vote;
         });
+
+        users.modify( user, 0, [&](auto& record){
+            record.votes--;
+        });
+
+        removeVoteRecord(userid, projectid);
     }
 
 };
 
-EOSIO_ABI( hackathon, (setkey)(proof)(togglep)(togglev)(clean)(user)(useracc)(usersponsor)(userupdate)(usertouch)(donation)(userban)(idea)(ideavote)(ideaflag)(ideaban)(team)(teamupdate)(teamjoin)(teamanswer)(teamkick)(teamwork)(project)(projectup)(projectban)(vote)(unvote) )
+EOSIO_ABI( hackathon, (setkey)(proof)(togglev)(togglep)(clean)(user)(useracc)(usersponsor)(userupdate)(usertouch)(donation)(userban)(idea)(ideavote)(ideaflag)(ideaban)(team)(teamupdate)(teamjoin)(teamanswer)(teamkick)(teamwork)(project)(projectup)(projectban)(vote)(unvote) )

@@ -41,22 +41,49 @@ namespace projects {
             return *this;
         }
 
+        ProjectVote& operator *=( const uint64_t& value ) {
+            use_of_blockchain       = mul(use_of_blockchain, value);
+            usefulness              = mul(usefulness, value);
+            originality             = mul(originality, value);
+            user_experience         = mul(user_experience, value);
+            fun                     = mul(fun, value);
+            return *this;
+        }
+
         EOSLIB_SERIALIZE( ProjectVote, (use_of_blockchain)(usefulness)(originality)(user_experience)(fun) )
+    };
+
+    struct ProjectVR {
+        uuid                projectid;
+        ProjectVote         vote;
+
+        bool operator ==(const uuid pid) const {
+            return projectid == pid;
+        }
+
+        EOSLIB_SERIALIZE( ProjectVR, (projectid)(vote) )
+    };
+
+    // @abi table projectvotes i64
+    struct VoteRecord {
+        uuid                userid;
+        vector<ProjectVR>   votes;
+
+        uuid primary_key() const { return userid; }
+        EOSLIB_SERIALIZE( VoteRecord, (userid)(votes) )
     };
 
     // @abi table projects i64
     struct Project {
         uuid                teamid;
-        string              name;
-        string              overview;
         string              whitepaper;
         string              category;
-        vector<string>      tags;
         vector<Link>        links;
         ProjectVote         votes;
+        account_name        account;
 
         uuid primary_key() const { return teamid; }
-        EOSLIB_SERIALIZE( Project, (teamid)(name)(overview)(whitepaper)(category)(tags)(links)(votes) )
+        EOSLIB_SERIALIZE( Project, (teamid)(whitepaper)(category)(links)(votes)(account) )
     };
 
 }

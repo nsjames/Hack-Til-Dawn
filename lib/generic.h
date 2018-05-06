@@ -88,12 +88,20 @@ namespace generic {
 
     template <typename T>
     T add( T a, T b ){
-        return clamp<T>(a + b, std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
+        return a+b <= std::numeric_limits<T>::max()
+             ? a+b  : std::numeric_limits<T>::max();
     }
 
     template <typename T>
     T sub( T a, T b ){
-        return clamp<T>(a - b, std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
+        return a-b >= std::numeric_limits<T>::min()
+             ? a-b  : std::numeric_limits<T>::min();
+    }
+
+    template <typename T>
+    T mul( T a, T b ){
+        return a*b <= std::numeric_limits<T>::max()
+             ? a*b  : std::numeric_limits<T>::max();
     }
 }
 

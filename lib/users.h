@@ -16,9 +16,10 @@ namespace users {
         uint64_t                last_active;
         account_name            account;
         boolean                 sponsor;
+        uint64_t                votes;
 
         uuid primary_key() const { return keyid; }
-        EOSLIB_SERIALIZE( User, (keyid)(key)(name)(type)(bio)(links)(last_active)(account)(sponsor) )
+        EOSLIB_SERIALIZE( User, (keyid)(key)(name)(type)(bio)(links)(last_active)(account)(sponsor)(votes) )
     };
 
     // @abi table donations i64
