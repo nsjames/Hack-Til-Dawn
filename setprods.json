@@ -6,16 +6,28 @@
       "block_signing_key": "EOS8CApMiC2r9u3Ae2SxL8id1E1gsUyN797s22x5BN4br5sJVao71"
     },
     {
-      "producer_name": "edenx",
-      "block_signing_key": "EOS6MJdcRLyVCsUbUDBEXsbCxStuvwFEQmXFffsatHqGCV4ELeaF8"
-    },
-    {
       "producer_name": "eosnewyork",
-      "block_signing_key": "EOS8fDbYtSuDDcGPQPmzP7bqmMpaNin4Yum3esqcMpz8wzjYG2JSY"
+      "block_signing_key": "EOS55getwqVsXAD3Ws9uDZ1zFVMNEXxdeZHbwCyfUruF3YcvznJEM"
     },
     {
       "producer_name": "meet.one",
       "block_signing_key": "EOS89nqhePAogKBGTa7ent35yp3iYUh6z6yMVLRRx2KmnF5ixaWcy"
+    },
+    {
+      "producer_name": "edenx",
+      "block_signing_key": "EOS6MJdcRLyVCsUbUDBEXsbCxStuvwFEQmXFffsatHqGCV4ELeaF8"
+    },
+    {
+      "producer_name": "oraclechain",
+      "block_signing_key": "EOS6D6yHpL8UmhFC3Jmw9w3W85x9nUCyZXagFe4B8ZynDJ3jrxf78"
+    },
+    {
+      "producer_name": "eostribe",
+      "block_signing_key": "EOS7pBfK4YZX5RSzt9t965fizuub7ZbkRGcYiRWgLVyBkif2HqKmJ"
+    },
+    {
+      "producer_name": "eos.cafe",
+      "block_signing_key": "EOS8bQz8ve6DpfVTaPXPotrjW3J2h6uToW4g2uV9rXfMYSwicawma"
     },
     {
       "producer_name": "eosphere",
@@ -24,14 +36,6 @@
     {
       "producer_name": "eos.cannon",
       "block_signing_key": "EOS6Fgpm45mNLaMZ6UoqL9Yt1JpfyFmhRaMZLWYL6oLTi2hyvGCBa"
-    },
-    {
-      "producer_name": "oraclechain",
-      "block_signing_key": "EOS6D6yHpL8UmhFC3Jmw9w3W85x9nUCyZXagFe4B8ZynDJ3jrxf78"
-    },
-    {
-      "producer_name": "eos.cafe",
-      "block_signing_key": "EOS8bQz8ve6DpfVTaPXPotrjW3J2h6uToW4g2uV9rXfMYSwicawma"
     }
   ]
 }
