@@ -1,5 +1,5 @@
 {
-  "to": "eosio.token",
+  "to": "eosio",
   "quantity": "1000000000.0000 EOS",
-  "memo": "init"
+  "memo": "Initial issuance"
 }
