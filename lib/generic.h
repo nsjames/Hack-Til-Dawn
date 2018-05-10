@@ -37,6 +37,27 @@ namespace generic {
         EOSLIB_SERIALIZE( MemberVector, (keyid)(teamids) )
     };
 
+    // @abi table settings i64
+    struct Settings {
+        uint64_t                stopped;
+        uint64_t                votingEnabled;
+        uint64_t                projectsEnabled;
+        account_name            appKey;
+        checksum256             proof;
+
+        uuid primary_key() const { return 0; }
+        EOSLIB_SERIALIZE( Settings, (stopped)(votingEnabled)(projectsEnabled)(appKey)(proof) )
+    };
+
+    // @abi table shares i64
+    struct Share {
+        uuid                   userid;
+        uint64_t               count;
+
+        uuid primary_key() const { return userid; }
+        EOSLIB_SERIALIZE( Share, (userid)(count) )
+    };
+
 
     // HELPERS
     inline static uint64_t murmur( const string& strkey ){

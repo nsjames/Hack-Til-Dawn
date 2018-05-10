@@ -46,9 +46,8 @@ private:
      * @param key
      */
     void prove( signature sig, public_key key ){
-        eosio_assert(SignProof(code,_self).exists(), "No signature proof is set");
-        Proof proof = SignProof(code,_self).get();
-        assert_recover_key( &proof.hash, (const char*)&sig, sizeof(sig), (const char*)&key.data, sizeof(key) );
+        checksum256 hash = proofHash();
+        assert_recover_key( &hash, (const char*)&sig, sizeof(sig), (const char*)&key.data, sizeof(key) );
     }
 
     void proveUser(string strkey, signature sig){
@@ -148,7 +147,23 @@ private:
         return vote *= totalVotes/sponsorCount;
     }
 
-    typedef multi_index<N(users),     User>                         Users;
+    Settings getSettings(){
+        return HackathonSettings(code,_self).get();
+    }
+
+    void setSettings( Settings& settings ){
+        return HackathonSettings(code,_self).set(settings,_self);
+    }
+
+    account_name appKey(){
+        return HackathonSettings(code,_self).get().appKey;
+    }
+
+    checksum256 proofHash(){
+        return HackathonSettings(code,_self).get().proof;
+    }
+
+    typedef multi_index<N(users), User>                             Users;
     typedef multi_index<N(usernames), NameToKey>                    UserNames;
     typedef multi_index<N(teams),     Team>                         Teams;
     typedef multi_index<N(teamnames), NameToKey>                    TeamNames;
@@ -157,9 +172,8 @@ private:
     typedef multi_index<N(projnames),  NameToKey>                   ProjectNames;
     typedef multi_index<N(donations),  Donations>                   UserDonations;
     typedef multi_index<N(projectvotes), VoteRecord>                ProjectVoteRecords;
+    typedef multi_index<N(shares), Share>                           Shares;
 
-    typedef singleton<N(appkey), account_name>                      AppKey;
-    typedef singleton<N(proof), Proof>                              SignProof;
     typedef singleton<N(ideavotes), uint8_t>                        IdeaVotes;
     typedef singleton<N(ideaflags), uint8_t>                        IdeaFlags;
     typedef singleton<N(teamideas), uuid>                           TeamIdea;
@@ -171,29 +185,22 @@ private:
     typedef singleton<N(votetimes), uint64_t>                       VoteTimes;
     typedef singleton<N(captchas), uuid>                            Scatters;
     typedef singleton<N(memberteams), MemberVector>                 MemberOfTeams;
-    typedef singleton<N(canvote), boolean>                          CanVote;
-    typedef singleton<N(canproj), boolean>                          CanUploadProjects;
     typedef singleton<N(sponsorcount), uint64_t>                    SponsorCount;
     typedef singleton<N(totalvotes), uint64_t>                      TotalVotes;
+    typedef singleton<N(settings), Settings>                        HackathonSettings;
+    typedef singleton<N(shareips), uint64_t>                        ShareIPs;
 
 public:
     hackathon ( account_name self ) : contract(self){}
 
-    void setkey( account_name key ){
+    void init( account_name key, string proof ){
         require_auth(_self);
         require_auth(key);
-        AppKey(code,_self).set(key, _self);
-    }
 
-    /***
-     * Must be set before any signature requiring methods can be called.
-     * @param cleartext
-     */
-    void proof( string cleartext ){
-        require_auth(_self);
         checksum256 hash;
-        sha256((char *) &cleartext, sizeof(cleartext), &hash);
-        SignProof(code,_self).set(Proof{hash}, _self);
+        sha256((char *) &proof, sizeof(proof), &hash);
+
+        HackathonSettings(code,_self).set(Settings{0,0,0, key, hash}, _self);
     }
 
     /***
@@ -202,7 +209,10 @@ public:
      */
     void togglev( boolean b ){
         require_auth(_self);
-        CanVote(code,_self).set(b,_self);
+
+        Settings settings = getSettings();
+        settings.votingEnabled = b;
+        setSettings(settings);
     }
 
     /***
@@ -210,14 +220,17 @@ public:
      */
     void togglep( boolean b ){
         require_auth(_self);
-        CanUploadProjects(code,_self).set(b,_self);
+
+        Settings settings = getSettings();
+        settings.projectsEnabled = b;
+        setSettings(settings);
     }
 
     /***
      * //TODO: TESTING ONLY!!!
      * Cleans tables
      */
-    void clean(){
+    void clean(string wtv){
         require_auth(_self);
         cleanTable<Users>();
         cleanTable<Teams>();
@@ -236,7 +249,7 @@ public:
      * @param strkey
      */
     void user( User user, string strkey, signature sig, string hash ){
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
         prove(sig, user.key);
 
         uuid keyid = murmur(strkey);
@@ -244,7 +257,7 @@ public:
 
         uuid scatter = murmur(hash);
         eosio_assert(!Scatters(code,scatter).exists(), "User already has an account");
-        Scatters(code,scatter).set(keyid, _self);
+        if(user.type == "Voter") Scatters(code,scatter).set(keyid, _self);
 
         //TODO: Validate user type
 
@@ -301,7 +314,7 @@ public:
      * @param sig
      */
     void userupdate( User user, signature sig ){
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
         Users users(_self, _self);
         auto existingUser = users.find(user.keyid);
         eosio_assert(existingUser != users.end(), "This user does not exist");
@@ -327,7 +340,7 @@ public:
      * @param strkey
      */
     void usertouch( string strkey, signature sig ){
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
         proveUser(strkey, sig);
         Users users(_self, _self);
         auto user = users.find(murmur(strkey));
@@ -371,7 +384,7 @@ public:
      * @param idea
      */
     void idea( Idea idea, string strkey, signature sig ){
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
         uuid id = murmur(idea.description);
         eosio_assert(!BannedIdeas(code,id).exists(), "Idea is banned");
 
@@ -390,7 +403,7 @@ public:
 
     void ideavote( IdeaAction vote, string strkey, signature sig ){
         proveUser(strkey, sig);
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
 
         Ideas ideas(_self, _self);
         auto idea = ideas.find(vote.ideaid);
@@ -406,7 +419,7 @@ public:
 
     void ideaflag( IdeaAction flag, string strkey, signature sig ){
         proveUser(strkey, sig);
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
 
         Ideas ideas(_self, _self);
         auto idea = ideas.find(flag.ideaid);
@@ -435,7 +448,7 @@ public:
      * @param strkey
      */
     void team( Team team, string strkey, signature sig ){
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
         Users users(_self, _self);
         uuid id = murmur(strkey);
         uuid nameid = murmur(team.name);
@@ -466,7 +479,7 @@ public:
      * @param sig
      */
     void teamupdate( Team team, signature sig ){
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
 
         Teams teams(_self, _self);
         auto existingTeam = teams.find(team.keyid);
@@ -495,7 +508,7 @@ public:
      * @param sig
      */
     void teamjoin( uuid teamid, uuid userid, signature sig ){
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
         uint64_t fingerprint = concatInts(userid, fingerprint);
         eosio_assert(!AlreadyRequested(code,fingerprint).exists(), "User has already requested this");
 
@@ -530,7 +543,7 @@ public:
      * @param sig
      */
     void teamanswer( uuid teamid, uuid userid, boolean accepted, signature sig ){
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
         Teams teams(_self, _self);
         Users users(_self, _self);
         auto team = teams.find(teamid);
@@ -571,7 +584,7 @@ public:
      * @param sig
      */
     void teamkick( uuid teamid, uuid userid, signature sig ){
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
         Teams teams(_self, _self);
         Users users(_self, _self);
         auto team = teams.find(teamid);
@@ -607,7 +620,7 @@ public:
      * @param ideaid
      */
     void teamwork( uuid teamid, uuid ideaid, signature sig ){
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
         Teams teams(_self, _self);
         Ideas ideas(_self, _self);
         auto team = teams.find(teamid);
@@ -646,11 +659,16 @@ public:
      * @param sig
      */
     void project ( Project project, signature sig ){
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
         Teams teams(_self, _self);
         auto team = teams.find(project.teamid);
         eosio_assert(team != teams.end(), "Team does not exist");
-        eosio_assert(CanUploadProjects(code,_self).get(), "Project creation is closed");
+        eosio_assert(getSettings().projectsEnabled, "Project creation is closed");
+
+        Users users(_self, _self);
+        auto leader = users.find(project.teamid);
+        eosio_assert(leader != users.end(), "Leader does not exist");
+        eosio_assert(leader->account, "Leader does not have an account");
 
         prove(sig, team->key);
 
@@ -661,6 +679,7 @@ public:
         projects.emplace( _self, [&](auto& record){
             record = project;
             record.teamid = team->keyid;
+            record.account = leader->account;
             record.votes = ProjectVote{0,0,0,0,0};
         });
     }
@@ -670,9 +689,9 @@ public:
      * @param project
      * @param sig
      */
-    void projectup( Project project ){
-        require_auth(AppKey(code,_self).get());
-        eosio_assert(CanUploadProjects(code,_self).get(), "Project modification is closed");
+    void projectup( Project project, string nothing ){
+        require_auth(appKey());
+        eosio_assert(getSettings().projectsEnabled, "Project modification is closed");
 
         Projects projects(_self, _self);
         auto existingProject = projects.find(project.teamid);
@@ -694,12 +713,12 @@ public:
     }
 
     void vote( ProjectVote vote, uuid projectid, uuid userid ){
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
         Users users(_self, _self);
         auto user = users.find(userid);
         eosio_assert(user != users.end(), "User does not exist");
-        require_auth(user->account);
-        eosio_assert(user->sponsor || CanVote(code,_self).get(), "Voting is closed");
+        eosio_assert(user->account, "User does not have an account");
+        eosio_assert(user->sponsor || getSettings().votingEnabled, "Voting is closed");
         eosio_assert(user->votes < 30, "You have already voted on 30 projects.");
 
         require_auth(user->account);
@@ -731,12 +750,12 @@ public:
     }
 
     void unvote( uuid userid, uuid projectid ){
-        require_auth(AppKey(code,_self).get());
+        require_auth(appKey());
         Users users(_self, _self);
         auto user = users.find(userid);
         eosio_assert(user != users.end(), "User does not exist");
-        require_auth(user->account);
-        eosio_assert(user->sponsor || CanVote(code,_self).get(), "Voting is closed");
+        eosio_assert(user->account, "User does not have an account");
+        eosio_assert(user->sponsor || getSettings().votingEnabled, "Voting is closed");
 
         require_auth(user->account);
 
@@ -749,7 +768,7 @@ public:
 
         if(!user->sponsor){
             uint64_t votedOn = VoteTimes(code,fingerprint).get();
-            eosio_assert(votedOn < (now() - 60*60*6*1000), "It's too early to rescind this vote, users must wait 6 hours before rescinding votes");
+            eosio_assert(votedOn < (now() - 60*60*6), "It's too early to rescind this vote, users must wait 6 hours before rescinding votes");
             TotalVotes(code,_self).set(getTotalVotes()-1,_self);
         }
 
@@ -768,6 +787,29 @@ public:
         removeVoteRecord(userid, projectid);
     }
 
+    void share( uuid userid, string iphash ){
+        require_auth(appKey());
+        Users users(_self,_self);
+        auto user = users.find(userid);
+        eosio_assert(user != users.end(), "No such user");
+
+        uuid ip = murmur(iphash);
+        if(!ShareIPs(code,ip).exists()){
+            ShareIPs(code,ip).set(1,_self);
+
+            Shares shares(_self,_self);
+            auto sharer = shares.find(userid);
+            if(sharer == shares.end()) shares.emplace( _self, [&](auto& record){
+                    record.userid = userid;
+                    record.count = 1;
+                });
+            else shares.modify( sharer, 0, [&](auto& record){
+                    record.count++;
+                });
+        }
+
+    }
+
 };
 
-EOSIO_ABI( hackathon, (setkey)(proof)(togglev)(togglep)(clean)(user)(useracc)(usersponsor)(userupdate)(usertouch)(donation)(userban)(idea)(ideavote)(ideaflag)(ideaban)(team)(teamupdate)(teamjoin)(teamanswer)(teamkick)(teamwork)(project)(projectup)(projectban)(vote)(unvote) )
+EOSIO_ABI( hackathon, (init)(togglev)(togglep)(clean)(user)(useracc)(usersponsor)(userupdate)(usertouch)(donation)(userban)(idea)(ideavote)(ideaflag)(ideaban)(team)(teamupdate)(teamjoin)(teamanswer)(teamkick)(teamwork)(project)(projectup)(projectban)(vote)(unvote)(share) )
