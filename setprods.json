@@ -6,6 +6,14 @@
       "block_signing_key": "EOS8CApMiC2r9u3Ae2SxL8id1E1gsUyN797s22x5BN4br5sJVao71"
     },
     {
+      "producer_name": "eos.newyork",
+      "block_signing_key": "EOS55getwqVsXAD3Ws9uDZ1zFVMNEXxdeZHbwCyfUruF3YcvznJEM"
+    },
+    {
+      "producer_name": "meet.one",
+      "block_signing_key": "EOS89nqhePAogKBGTa7ent35yp3iYUh6z6yMVLRRx2KmnF5ixaWcy"
+    },
+    {
       "producer_name": "sweden",
       "block_signing_key": "EOS6MJdcRLyVCsUbUDBEXsbCxStuvwFEQmXFffsatHqGCV4ELeaF8"
     },
