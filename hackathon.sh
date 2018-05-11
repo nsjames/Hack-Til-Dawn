@@ -21,8 +21,7 @@ cleos wallet import ${HACKAPP_KEY}
 
 cleos create account eosio eosio.token EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 
-TOKEN_DIR=~/eos/contracts/eosio.token/
-eosiocpp -o ${TOKEN_DIR}eosio.token.wast ${TOKEN_DIR}eosio.token.cpp
+TOKEN_DIR=/contracts/eosio.token/
 cleos set contract eosio.token ${TOKEN_DIR}
 
 cleos create account eosio hackathon EOS6TqXzpicna18dyRN3YoeLuviK3GJ3Geiid7TCfHCSZhXE49C44 EOS6TqXzpicna18dyRN3YoeLuviK3GJ3Geiid7TCfHCSZhXE49C44
