@@ -22,8 +22,8 @@ if [ ! -f ${SERVER_BLOCK} ]; then
             root /var/www/hackathon;
             index index.html;
 
-            #server_name hack-til-dawn.com www.hack-til-dawn.com;
-            server_name localhost;
+            server_name hack-til-dawn.com www.hack-til-dawn.com;
+            #server_name localhost;
 
             location / {
             }
