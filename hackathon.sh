@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 # YOU MUST USE
 # chmod +x hackathon.sh
 # FOR THIS TO WORK!!
@@ -22,6 +23,9 @@ cleos wallet import ${HACKAPP_KEY}
 cleos create account eosio eosio.token EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 
 TOKEN_DIR=/contracts/eosio.token/
+if [ ! -f ${TOKEN_DIR} ]; then
+    TOKEN_DIR=~/eos/contracts/eosio.token/
+fi
 cleos set contract eosio.token ${TOKEN_DIR}
 
 cleos create account eosio hackathon EOS6TqXzpicna18dyRN3YoeLuviK3GJ3Geiid7TCfHCSZhXE49C44 EOS6TqXzpicna18dyRN3YoeLuviK3GJ3Geiid7TCfHCSZhXE49C44
@@ -34,3 +38,4 @@ cleos push action eosio.token transfer '[ "eosio", "hackapp", "1000000000.0000 E
 # Set hackathon contract on `hackathon` account.
 cleos set contract hackathon ./hackathon
 cleos push action hackathon init '["hackapp", "proof"]' -p hackapp -p hackathon
+
