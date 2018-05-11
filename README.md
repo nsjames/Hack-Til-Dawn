@@ -19,7 +19,7 @@ To make things easier, you can setup a `bash_profile` with those configurations 
 
 ```
 # Hack-Til-Dawn
-alias cleos="cleos --url https://hack-til-dawn.eosnation.io"
+alias cleos="cleos --url http://eos.hack-til-dawn.com"
 ```
 
 Reload your new configs with `source`.
