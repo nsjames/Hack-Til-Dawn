@@ -1,5 +1,3 @@
 .idea/
 .git/
 cmake-build-debug/
-*.abi
-*.wast
