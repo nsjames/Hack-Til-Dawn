@@ -11,4 +11,4 @@ cleos create account eosio eos.cannon EOS6Fgpm45mNLaMZ6UoqL9Yt1JpfyFmhRaMZLWYL6o
 cleos create account eosio eosiodetroit EOS6gVZyCcoVmL9b8X8R3MKpmUC54bdPk3EFfGWBtmst2vUbVjpMm EOS8dFGhWAYdSENHRoBtqy1Nn3jFVwHhM4LhFBs5WddcipwZKsyNJ
 
 # Set Block Producers
-cleos push action setprods ./data/setprods.json -p eosio
+cleos push action eosio setprods ./data/setprods.json -p eosio
