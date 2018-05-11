@@ -36,6 +36,10 @@
     {
       "producer_name": "eos.cannon",
       "block_signing_key": "EOS6Fgpm45mNLaMZ6UoqL9Yt1JpfyFmhRaMZLWYL6oLTi2hyvGCBa"
+    },
+    {
+      "producer_name": "eosiodetroit",
+      "block_signing_key": "EOS8dFGhWAYdSENHRoBtqy1Nn3jFVwHhM4LhFBs5WddcipwZKsyNJ"
     }
   ]
 }
