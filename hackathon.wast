@@ -27076,7 +27076,7 @@
      (i64.extend_u/i32
       (i32.add
        (call $now)
-       (i32.const -21600000)
+       (i32.const -21600)
       )
      )
     )

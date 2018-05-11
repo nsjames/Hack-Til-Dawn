@@ -1,12 +1,29 @@
 #!/bin/bash
 
-cleos wallet import 5K92JPHddxyGVFx81jx7rgvjNZPxQzQz33ZqYzFwjfnPX8bbdKz
-cleos wallet import 5KjbZQLH3EAfgXF3jejYM2WZjzJCUQH7NEkT1mVcBy2xoFdSWro
-cleos wallet import 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
+# YOU MUST USE
+# chmod +x hackathon.sh
+# FOR THIS TO WORK!!
 
-#cd into the hackathon contract directory
+echo "Unlocking Wallet"
+cleos wallet unlock
+printf "\n"
+
+echo -n "Enter a private key for the 'hackathon' account":
+read -s HACKATHON_KEY
+printf "\n"
+
+echo -n "Enter a private key for the 'hackapp' account ( not the same as hackathon )":
+read -s HACKAPP_KEY
+printf "\n"
+
+cleos wallet import ${HACKATHON_KEY}
+cleos wallet import ${HACKAPP_KEY}
+
 cleos create account eosio eosio.token EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
-comptract.sh eosio.token ~/eos/contracts/eosio.token
+
+TOKEN_DIR=~/eos/contracts/eosio.token/
+eosiocpp -o ${TOKEN_DIR}eosio.token.wast ${TOKEN_DIR}eosio.token.cpp
+cleos set contract eosio.token ${TOKEN_DIR}
 
 cleos create account eosio hackathon EOS6TqXzpicna18dyRN3YoeLuviK3GJ3Geiid7TCfHCSZhXE49C44 EOS6TqXzpicna18dyRN3YoeLuviK3GJ3Geiid7TCfHCSZhXE49C44
 cleos create account eosio hackapp EOS7TcMmDtjxgSmMvwnYQWQp6FeZr8gDjRqBh8nCo8sgJNqaCST1u EOS7TcMmDtjxgSmMvwnYQWQp6FeZr8gDjRqBh8nCo8sgJNqaCST1u
@@ -16,4 +33,5 @@ cleos push action eosio.token issue '[ "eosio", "1000000000.0000 EOS", "memo" ]'
 cleos push action eosio.token transfer '[ "eosio", "hackapp", "1000000000.0000 EOS", "memo" ]' -p eosio
 
 # Set hackathon contract on `hackathon` account.
+cleos set contract hackathon ../hackathon
 cleos push action hackathon init '["hackapp", "proof"]' -p hackapp -p hackathon
