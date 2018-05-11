@@ -1,40 +1,53 @@
 #!/bin/bash
 
 # BASICS
+sudo add-apt-repository ppa:certbot/certbot -y
 sudo apt-get update
 sudo apt-get install curl git -y
 
 # NGINX
-sudo apt-get install nginx -y
-sudo ufw allow 'Nginx Full'
+if [ ! -d /etc/nginx ]; then
+    sudo apt-get install nginx -y
+    sudo ufw allow 'Nginx Full'
+fi
 
 sudo rm /etc/nginx/sites-available/default
-sudo echo "
-server {
-        listen 80 default_server;
-        listen [::]:80 default_server;
+SERVER_BLOCK=/etc/nginx/sites-available/hack-til-dawn.com
+if [ ! -f ${SERVER_BLOCK} ]; then
+    sudo echo "
+    server {
+            listen 80 default_server;
+            listen [::]:80 default_server;
 
-        root /var/www/hackathon;
-        index index.html;
+            root /var/www/hackathon;
+            index index.html;
 
-        server_name hack-til-dawn.com www.hack-til-dawn.com;
+            #server_name hack-til-dawn.com www.hack-til-dawn.com;
+            server_name localhost;
 
-        location / {
-        }
-}
-" >> /etc/nginx/sites-available/default
-rm /etc/nginx/sites-enabled/default
-sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
-sudo systemctl restart nginx
+            location / {
+            }
+    }
+    " >> ${SERVER_BLOCK}
+    rm ${SERVER_BLOCK}
+    sudo ln -s ${SERVER_BLOCK} /etc/nginx/sites-enabled/
+    sudo systemctl restart nginx
+
+    # SSL
+    sudo apt-get install python-certbot-nginx -y
+    sudo certbot --nginx -n --agree-tos --email=scatter.eos@gmail.com --redirect -d hack-til-dawn.com -d www.hack-til-dawn.com
+fi
 
 
 
 # NODEJS
 cd ~
-curl -sL https://deb.nodesource.com/setup_9.x -o nodesource_setup.sh
-sudo bash nodesource_setup.sh
-sudo apt-get install nodejs -y
-sudo apt-get install build-essential -y
+if [ ! -f ~/nodesource_setup.sh ]; then
+    curl -sL https://deb.nodesource.com/setup_9.x -o nodesource_setup.sh
+    sudo bash nodesource_setup.sh
+    sudo apt-get install nodejs -y
+    sudo apt-get install build-essential -y
+fi
 
 # Hackathon
 git clone https://github.com/nsjames/scatter-hackathon.git
