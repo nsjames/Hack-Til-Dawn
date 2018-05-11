@@ -32,5 +32,5 @@ cleos push action eosio.token issue '[ "eosio", "1000000000.0000 EOS", "memo" ]'
 cleos push action eosio.token transfer '[ "eosio", "hackapp", "1000000000.0000 EOS", "memo" ]' -p eosio
 
 # Set hackathon contract on `hackathon` account.
-cleos set contract hackathon ../hackathon
+cleos set contract hackathon ./hackathon
 cleos push action hackathon init '["hackapp", "proof"]' -p hackapp -p hackathon
