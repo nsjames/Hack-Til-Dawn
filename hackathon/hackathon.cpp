@@ -232,15 +232,15 @@ public:
      */
     void clean(string wtv){
         require_auth(_self);
-        cleanTable<Users>();
-        cleanTable<Teams>();
-        cleanTable<Ideas>();
-        cleanTable<Projects>();
-
-        cleanTable<ProjectNames>();
-        cleanTable<UserNames>();
-        cleanTable<TeamNames>();
-        cleanTable<ProjectVoteRecords>();
+//        cleanTable<Users>();
+//        cleanTable<Teams>();
+//        cleanTable<Ideas>();
+//        cleanTable<Projects>();
+//
+//        cleanTable<ProjectNames>();
+//        cleanTable<UserNames>();
+//        cleanTable<TeamNames>();
+//        cleanTable<ProjectVoteRecords>();
     }
 
     /***
