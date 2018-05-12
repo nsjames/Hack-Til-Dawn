@@ -484,9 +484,17 @@ public:
         Teams teams(_self, _self);
         auto existingTeam = teams.find(team.keyid);
         eosio_assert(existingTeam != teams.end(), "Team does not exist");
-        if(existingTeam->name != team.name) nameIsUnique<TeamNames>(murmur(team.name));
+
+        uuid oldName = murmur(existingTeam->name);
+        uuid newName = murmur(team.name);
 
         prove(sig, existingTeam->key);
+
+        if(oldName != newName) {
+            nameIsUnique<TeamNames>(newName);
+            removeNameReference<TeamNames>(oldName);
+            addNameReference<TeamNames>( newName, existingTeam->keyid );
+        }
 
         teams.modify( existingTeam, 0, [&]( auto& record ){
             record.name = team.name;
@@ -494,10 +502,7 @@ public:
             record.tags = team.tags;
             record.links = team.links;
 
-            if(team.name != existingTeam->name){
-                addNameReference<TeamNames>( murmur(team.name), existingTeam->keyid );
-                removeNameReference<TeamNames>(murmur(existingTeam->name));
-            }
+
         });
     }
 

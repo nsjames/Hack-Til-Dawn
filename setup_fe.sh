@@ -26,6 +26,7 @@ if [ ! -f ${SERVER_BLOCK} ]; then
             #server_name localhost;
 
             location / {
+                try_files \$uri \$uri/ /index.html;
             }
     }
     " >> ${SERVER_BLOCK}
