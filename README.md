@@ -5,7 +5,7 @@
 Configure your `nodeos` with the following configurations:
 
 - [config.ini](https://github.com/nsjames/Hack-Til-Dawn/blob/master/config/config.ini)
-- [genesis.json](https://github.com/nsjames/Hack-Til-Dawn/blob/master/config/genesis.ini)
+- [genesis.json](https://github.com/nsjames/Hack-Til-Dawn/blob/master/config/genesis.json)
 
 ## Connect `cleos`
 
